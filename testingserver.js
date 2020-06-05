@@ -1,6 +1,5 @@
 var express = require("express");
 var bodyParser = require("body-parser");
-
 var db;
 var currentRoom = "";
 //import puppetter
@@ -8,8 +7,8 @@ const puppeteer = require("puppeteer");
 var urls = [
   "https://www.amazon.ca/gp/product/B075GVZTDZ?pf_rd_r=CBGPYKVXJ6Z36GMQM4VP&pf_rd_p=05326fd5-c43e-4948-99b1-a65b129fdd73",
   "https://www.amazon.ca/Bluetooth-Arteck-Stainless-Smartphone-Rechargeable/dp/B015LSEUS8/ref=pd_sbs_147_4/138-6187995-9719521?_encoding=UTF8&pd_rd_i=B015LSEUS8&pd_rd_r=9f38ffb1-8987-410e-98b0-bcf8e77763a7&pd_rd_w=DFekK&pd_rd_wg=jmJwy&pf_rd_p=0ec96c83-1800-4e36-8486-44f5573a2612&pf_rd_r=D5XFQND5K3T58B8YZJF3&psc=1&refRID=D5XFQND5K3T58B8YZJF3",
+  "https://stackoverflow.com/questions/9792927/javascript-array-search-and-remove-string",
 ];
-//https://www.amazon.ca/gp/product/B07VG7PMC5/ref=ppx_yo_dt_b_asin_title_o06_s00?ie=UTF8&psc=1
 var updatedList = [];
 var app = express();
 
@@ -23,15 +22,12 @@ app.use(
   })
 );
 app.use(bodyParser.json());
-// app.use(cors());
 
 //posts request for add item url
 app.post("/additem", function (request, response) {
-  // console.log(request.body);
   var url = request.body.myurl;
-  // console.log(request.body.url);
-  // console.log(url);
   console.log(urls);
+  //checks if item is in the list already
   var arraycontainsurl = urls.indexOf(url) > -1;
   if (arraycontainsurl == 1) {
     var obj = [
@@ -39,7 +35,7 @@ app.post("/additem", function (request, response) {
         userId: 0,
         id: 0,
         title: "error",
-        body: "item already in list",
+        body: "Whoops this item is already in your list!",
       },
     ];
     response.writeHead(200, {
@@ -60,6 +56,7 @@ app.post("/additem", function (request, response) {
           title: values[0],
           body: values[1],
         },
+        urls,
       ];
       response.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8",
@@ -73,25 +70,36 @@ app.post("/additem", function (request, response) {
 
 //gets a list of current products
 app.get("/testing", function (request, response) {
-  console.log("refreseed");
+  console.log("PAGE REFRESHED");
   var error, type, message, code;
   error = false;
   type = "Success";
   code = 200;
   updatedList = [];
-
-  someFunction(urls)
+  updatedlistfunction(urls)
     .then((results) => {
       // array of results in order here
-      console.log("RESULTS" + results[0][0]);
       for (let i = 0; i < urls.length; i++) {
-        updatedList.push({
-          userId: 1,
-          id: urls[i],
-          title: results[i][0],
-          body: results[i][1],
-        });
+        if (results[i][0] === "error") {
+          updatedList.push({
+            userId: 1,
+            id: urls[i],
+            title: results[i][0],
+            body: results[i][1],
+          });
+          const indexOfError = urls.indexOf(results[i][0]);
+          urls.splice(indexOfError, 1);
+        } else {
+          updatedList.push({
+            userId: 1,
+            id: urls[i],
+            title: results[i][0],
+            body: results[i][1],
+          });
+        }
+        // console.log(urls);
       }
+      updatedList.push(urls);
       response.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8",
       });
@@ -101,18 +109,30 @@ app.get("/testing", function (request, response) {
     .catch((err) => {
       console.log(err);
     });
-
-  // var updatedListnew = updatelistfunction(urls);
-  // response.writeHead(200, {
-  //   "Content-Type": "application/json; charset=utf-8",
-  // });
-  // response.write(JSON.stringify(updatedListnew));
-  // response.end();
-  // console.log("sending get request back" + updatedListnew);
 });
 
-//function about promises
-function someFunction(urls) {
+//function that gets call whenever changes are made to url list
+app.post("/updatelist", function (request, response) {
+  urls = request.body.urls;
+  console.log(urls);
+  var obj = [
+    {
+      userId: 0,
+      id: 0,
+      title: "success",
+      body: "urls successfully updated ",
+    },
+  ];
+  response.writeHead(200, {
+    "Content-Type": "application/json; charset=utf-8",
+  });
+  response.write(JSON.stringify(obj));
+  response.end();
+  console.log("updated the list success!");
+});
+
+//function that updates list with promises
+function updatedlistfunction(urls) {
   let promises = [];
   for (let i = 0; i < urls.length; i++) {
     promises.push(scrapeProduct(urls[i]));
@@ -120,28 +140,6 @@ function someFunction(urls) {
   return Promise.all(promises);
 }
 
-//function to retreive updated title and prices of list of urls
-function updatelistfunction(urls) {
-  for (let i = 0; i < urls.length; i++) {
-    if (i == 0) {
-      updatedList = [];
-    }
-    (async () => {
-      // console.log(urls);
-      var values = await scrapeProduct(urls[i]);
-      console.log("values why tho " + values);
-      newupdatedList = {
-        userId: 1,
-        id: urls[i],
-        title: values[0],
-        body: values[1],
-      };
-      updatedList.push(newupdatedList);
-    })();
-  }
-  console.log(updatedList);
-  return updatedList;
-}
 //function for retreiving title and price of product from single url
 async function scrapeProduct(url) {
   try {
@@ -170,6 +168,6 @@ async function scrapeProduct(url) {
     return await [title, price];
   } catch (error) {
     console.log("error cannot display item");
-    return await ["error", "cannot get product info"];
+    return await ["error", "Sorry we cannot get the product info!"];
   }
 }
