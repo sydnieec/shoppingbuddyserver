@@ -77,7 +77,7 @@ app.post("/additem", function (request, response) {
         },
         urls,
       ];
-      //gets rid of updated url
+      //gets rid of updated url at the very end
       currentlist.splice(-1, 1);
       //pushes the object to the currentlist
       var objToCurrentList = {
@@ -106,11 +106,11 @@ app.get("/testing", function (request, response) {
   error = false;
   type = "Success";
   code = 200;
+  //refreshes updated list to keept most recent products
   updatedList = [];
   updatedlistfunction(urls, currentlist)
     .then((results) => {
       // array of results in order here
-
       if (currentlist === undefined || currentlist.length == 0) {
         //checks if user has visited before
         console.log("first time user");
@@ -150,12 +150,12 @@ app.get("/testing", function (request, response) {
             urls.splice(indexOfError, 1);
           } else {
             //finds the position of old item and converts object into interger
-            var elementPos = testingCurrentList
+            var elementPos = currentlist
               .map(function (x) {
                 return x.id;
               })
               .indexOf(urls[i]);
-            var objectFound = testingCurrentList[elementPos].body;
+            var objectFound = currentlist[elementPos].body;
             objectFound = JSON.stringify(objectFound);
             objectFound = objectFound.replace(/\D/g, "");
             objectFound = parseInt(objectFound);
@@ -191,15 +191,6 @@ app.get("/testing", function (request, response) {
             }
           }
         }
-        //   var elementPos = currentlist
-        //   .map(function (x) {
-        //     return x.id;
-        //   })
-        //   .indexOf(
-        //     "https://www.amazon.ca/gp/product/B075GVZTDZ?pf_rd_r=CBGPYKVXJ6Z36GMQM4VP&pf_rd_p=05326fd5-c43e-4948-99b1-a65b129fdd73"
-        //   );
-        // var objectFound = testingCurrentList[elementPos];
-        // console.log(objectFound);
       }
       updatedList.push(urls);
       response.writeHead(200, {
@@ -208,14 +199,13 @@ app.get("/testing", function (request, response) {
       response.write(JSON.stringify(updatedList));
       response.end();
       currentlist = updatedList;
-      // console.log(currentlist);
     })
     .catch((err) => {
       console.log(err);
     });
 });
 
-//function that gets call whenever changes are made to url list
+//function that gets call whenever changes are made to url list called whenever an item is deleted
 app.post("/updatelist", function (request, response) {
   urls = request.body.urls;
   productId = request.body.productId;
@@ -224,7 +214,6 @@ app.post("/updatelist", function (request, response) {
   });
   currentlist.splice(-1, 1);
   currentlist.push(urls);
-  // console.log(currentlist);
   var obj = [
     {
       userId: 0,
@@ -257,6 +246,7 @@ async function scrapeProduct(url) {
     const page = await browser.newPage();
     await page.goto(url);
 
+    //checks which website user has requested for
     if (url.startsWith("https://www.amazon.ca") === true) {
       const [el] = await page.$x('//*[@id="productTitle"]');
       const txt = await el.getProperty("textContent");
@@ -268,7 +258,6 @@ async function scrapeProduct(url) {
       const [el] = await page.$x("/html/body/div[1]/div/div/div[4]/div[1]/h1");
       const txt = await el.getProperty("textContent");
       var title = await txt.jsonValue();
-
       const [el2] = await page.$x(
         "/html/body/div[1]/div/div/div[4]/div[1]/div[2]/div[2]/div[1]/div/span/div"
       );
@@ -277,16 +266,11 @@ async function scrapeProduct(url) {
       var price = price.slice(0, -2) + "." + price.slice(-2);
     }
 
-    //*[@id="priceblock_dealprice"]
-    //*[@id="priceblock_ourprice"]
-
     //strips the title and price of whitespaces and new lines
     var title = title.replace(/\n/g, " ");
     var price = price.replace(/\n/g, " ");
     var title = title.replace(/\s\s+/g, " ");
     var price = price.replace(/\s\s+/g, " ");
-
-    // console.log({ title, price });
 
     browser.close();
 
@@ -295,5 +279,6 @@ async function scrapeProduct(url) {
     console.log(error);
     console.log("error cannot display item");
     return await ["error", "Sorry we cannot get the product info!"];
+    //sends back to clients an error messages
   }
 }
