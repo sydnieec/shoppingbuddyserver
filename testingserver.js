@@ -49,14 +49,24 @@ app.post("/additem", function (request, response) {
       var obj = [
         {
           userId: 1,
-          id: 1,
+          id: url,
           title: values[0],
           body: values[1],
         },
         urls,
       ];
-      currentlist.push(obj);
-      // console.log(currentlist);
+      //gets rid of updated url
+      currentlist.splice(-1, 1);
+      //pushes the object to the currentlist
+      var objToCurrentList = {
+        userId: 1,
+        id: url,
+        title: values[0],
+        body: values[1],
+      };
+      currentlist.push(objToCurrentList);
+      currentlist.push(urls);
+      console.log(currentlist);
       response.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8",
       });
@@ -104,7 +114,7 @@ app.get("/testing", function (request, response) {
       });
       response.write(JSON.stringify(updatedList));
       response.end();
-      // currentlist = updatedList;
+      currentlist = updatedList;
       console.log(currentlist);
     })
     .catch((err) => {
@@ -115,7 +125,13 @@ app.get("/testing", function (request, response) {
 //function that gets call whenever changes are made to url list
 app.post("/updatelist", function (request, response) {
   urls = request.body.urls;
-  console.log(urls);
+  productId = request.body.productId;
+  currentlist = currentlist.filter((x) => {
+    return x.id != productId;
+  });
+  currentlist.splice(-1, 1);
+  currentlist.push(urls);
+  console.log(currentlist);
   var obj = [
     {
       userId: 0,
@@ -166,17 +182,6 @@ async function scrapeProduct(url) {
       const txt2 = await el2.getProperty("textContent");
       var price = await txt2.jsonValue();
       var price = price.slice(0, -2) + "." + price.slice(-2);
-    } else if (url.startsWith("https://www.urbanoutfitters.com") === true) {
-      const [el] = await page.$x(
-        "/html/body/div[1]/div[1]/main/div[5]/div[2]/h1"
-      );
-      const txt = await el.getProperty("textContent");
-      var title = await txt.jsonValue();
-      const [el2] = await page.$x(
-        "/html/body/div[1]/div[1]/main/div[5]/div[2]/p[1]/span"
-      );
-      const txt2 = await el2.getProperty("textContent");
-      var price = await txt2.jsonValue();
     }
 
     //*[@id="priceblock_dealprice"]
