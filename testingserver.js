@@ -9,6 +9,28 @@ var urls = [
 ];
 var currentlist = [];
 var updatedList = [];
+var testingCurrentList = [
+  {
+    userId: 1,
+    id:
+      "https://www.amazon.ca/gp/product/B075GVZTDZ?pf_rd_r=CBGPYKVXJ6Z36GMQM4VP&pf_rd_p=05326fd5-c43e-4948-99b1-a65b129fdd73",
+    title:
+      " OMOTON Ultra-Slim Wireless Bluetooth Keyboard for iPad 7th Generation 10.2 inch, iPad Pro 11/12.9, iPad Air 10.5, iPad 9.7, iPad Mini, All iPhones and Other Bluetooth Enabled Devices, White ",
+    body: " CDN$ 28.99 ",
+  },
+  {
+    userId: 1,
+    id:
+      "https://www.amazon.ca/Bluetooth-Arteck-Stainless-Smartphone-Rechargeable/dp/B015LSEUS8/ref=pd_sbs_147_4/138-6187995-9719521?_encoding=UTF8&pd_rd_i=B015LSEUS8&pd_rd_r=9f38ffb1-8987-410e-98b0-bcf8e77763a7&pd_rd_w=DFekK&pd_rd_wg=jmJwy&pf_rd_p=0ec96c83-1800-4e36-8486-44f5573a2612&pf_rd_r=D5XFQND5K3T58B8YZJF3&psc=1&refRID=D5XFQND5K3T58B8YZJF3",
+    title:
+      " Arteck Stainless Steel Universal Portable Wireless Bluetooth Keyboard for iOS iPad Air, Pro, iPad Mini, Android ",
+    body: " CDN$ 20.99 ",
+  },
+  [
+    "https://www.amazon.ca/gp/product/B075GVZTDZ?pf_rd_r=CBGPYKVXJ6Z36GMQM4VP&pf_rd_p=05326fd5-c43e-4948-99b1-a65b129fdd73",
+    "https://www.amazon.ca/Bluetooth-Arteck-Stainless-Smartphone-Rechargeable/dp/B015LSEUS8/ref=pd_sbs_147_4/138-6187995-9719521?_encoding=UTF8&pd_rd_i=B015LSEUS8&pd_rd_r=9f38ffb1-8987-410e-98b0-bcf8e77763a7&pd_rd_w=DFekK&pd_rd_wg=jmJwy&pf_rd_p=0ec96c83-1800-4e36-8486-44f5573a2612&pf_rd_r=D5XFQND5K3T58B8YZJF3&psc=1&refRID=D5XFQND5K3T58B8YZJF3",
+  ],
+];
 var app = express();
 var server = app.listen(3000, function () {
   console.log("Listening");
@@ -85,28 +107,99 @@ app.get("/testing", function (request, response) {
   type = "Success";
   code = 200;
   updatedList = [];
-  updatedlistfunction(urls)
+  updatedlistfunction(urls, currentlist)
     .then((results) => {
       // array of results in order here
-      for (let i = 0; i < urls.length; i++) {
-        if (results[i][0] === "error") {
-          updatedList.push({
-            userId: 1,
-            id: urls[i],
-            title: results[i][0],
-            body: results[i][1],
-          });
-          const indexOfError = urls.indexOf(results[i][0]);
-          urls.splice(indexOfError, 1);
-        } else {
-          updatedList.push({
-            userId: 1,
-            id: urls[i],
-            title: results[i][0],
-            body: results[i][1],
-          });
+
+      if (currentlist === undefined || currentlist.length == 0) {
+        //checks if user has visited before
+        console.log("first time user");
+        for (let i = 0; i < urls.length; i++) {
+          if (results[i][0] === "error") {
+            updatedList.push({
+              userId: 1,
+              id: urls[i],
+              title: results[i][0],
+              body: results[i][1],
+            });
+            //delete the url in list if there is it says error
+            const indexOfError = urls.indexOf(results[i][0]);
+            urls.splice(indexOfError, 1);
+          } else {
+            updatedList.push({
+              userId: 1,
+              id: urls[i],
+              title: results[i][0],
+              body: results[i][1],
+            });
+          }
         }
-        // console.log(urls);
+      } else {
+        //checks and compares previous prices that user had with new retreived prices
+        console.log("user has visited before");
+        for (let i = 0; i < urls.length; i++) {
+          if (results[i][0] === "error") {
+            updatedList.push({
+              userId: 1,
+              id: urls[i],
+              title: results[i][0],
+              body: results[i][1],
+            });
+            //delete the url in list if there is it says error
+            const indexOfError = urls.indexOf(results[i][0]);
+            urls.splice(indexOfError, 1);
+          } else {
+            //finds the position of old item and converts object into interger
+            var elementPos = testingCurrentList
+              .map(function (x) {
+                return x.id;
+              })
+              .indexOf(urls[i]);
+            var objectFound = testingCurrentList[elementPos].body;
+            objectFound = JSON.stringify(objectFound);
+            objectFound = objectFound.replace(/\D/g, "");
+            objectFound = parseInt(objectFound);
+            //converts the retreived price into interger
+            var newPrice = JSON.stringify(results[i][1]);
+            newPrice = newPrice.replace(/\D/g, "");
+            newPrice = parseInt(newPrice);
+            //compares prices and sends deals to list
+            if (newPrice < objectFound) {
+              console.log("SALE");
+              updatedList.push({
+                userId: 1,
+                id: urls[i],
+                title: results[i][0],
+                body: "SALE" + results[i][1],
+              });
+            } else if (newPrice > objectFound) {
+              console.log("price went up");
+              updatedList.push({
+                userId: 1,
+                id: urls[i],
+                title: results[i][0],
+                body: "Price increased" + results[i][1],
+              });
+            } else {
+              console.log(newPrice + objectFound);
+              updatedList.push({
+                userId: 1,
+                id: urls[i],
+                title: results[i][0],
+                body: results[i][1],
+              });
+            }
+          }
+        }
+        //   var elementPos = currentlist
+        //   .map(function (x) {
+        //     return x.id;
+        //   })
+        //   .indexOf(
+        //     "https://www.amazon.ca/gp/product/B075GVZTDZ?pf_rd_r=CBGPYKVXJ6Z36GMQM4VP&pf_rd_p=05326fd5-c43e-4948-99b1-a65b129fdd73"
+        //   );
+        // var objectFound = testingCurrentList[elementPos];
+        // console.log(objectFound);
       }
       updatedList.push(urls);
       response.writeHead(200, {
@@ -115,7 +208,7 @@ app.get("/testing", function (request, response) {
       response.write(JSON.stringify(updatedList));
       response.end();
       currentlist = updatedList;
-      console.log(currentlist);
+      // console.log(currentlist);
     })
     .catch((err) => {
       console.log(err);
@@ -131,7 +224,7 @@ app.post("/updatelist", function (request, response) {
   });
   currentlist.splice(-1, 1);
   currentlist.push(urls);
-  console.log(currentlist);
+  // console.log(currentlist);
   var obj = [
     {
       userId: 0,
