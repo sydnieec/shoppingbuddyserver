@@ -1,21 +1,18 @@
 var express = require("express");
 var bodyParser = require("body-parser");
-var db;
-var currentRoom = "";
+
 //import puppetter
 const puppeteer = require("puppeteer");
 var urls = [
   "https://www.amazon.ca/gp/product/B075GVZTDZ?pf_rd_r=CBGPYKVXJ6Z36GMQM4VP&pf_rd_p=05326fd5-c43e-4948-99b1-a65b129fdd73",
   "https://www.amazon.ca/Bluetooth-Arteck-Stainless-Smartphone-Rechargeable/dp/B015LSEUS8/ref=pd_sbs_147_4/138-6187995-9719521?_encoding=UTF8&pd_rd_i=B015LSEUS8&pd_rd_r=9f38ffb1-8987-410e-98b0-bcf8e77763a7&pd_rd_w=DFekK&pd_rd_wg=jmJwy&pf_rd_p=0ec96c83-1800-4e36-8486-44f5573a2612&pf_rd_r=D5XFQND5K3T58B8YZJF3&psc=1&refRID=D5XFQND5K3T58B8YZJF3",
-  "https://stackoverflow.com/questions/9792927/javascript-array-search-and-remove-string",
 ];
+var currentlist = [];
 var updatedList = [];
 var app = express();
-
 var server = app.listen(3000, function () {
   console.log("Listening");
 });
-
 app.use(
   bodyParser.urlencoded({
     extended: true,
@@ -58,6 +55,8 @@ app.post("/additem", function (request, response) {
         },
         urls,
       ];
+      currentlist.push(obj);
+      // console.log(currentlist);
       response.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8",
       });
@@ -105,6 +104,8 @@ app.get("/testing", function (request, response) {
       });
       response.write(JSON.stringify(updatedList));
       response.end();
+      // currentlist = updatedList;
+      console.log(currentlist);
     })
     .catch((err) => {
       console.log(err);
@@ -147,13 +148,39 @@ async function scrapeProduct(url) {
     const page = await browser.newPage();
     await page.goto(url);
 
-    const [el] = await page.$x('//*[@id="productTitle"]');
-    const txt = await el.getProperty("textContent");
-    var title = await txt.jsonValue();
+    if (url.startsWith("https://www.amazon.ca") === true) {
+      const [el] = await page.$x('//*[@id="productTitle"]');
+      const txt = await el.getProperty("textContent");
+      var title = await txt.jsonValue();
+      const [el2] = await page.$x('//*[@id="price_inside_buybox"]');
+      const txt2 = await el2.getProperty("textContent");
+      var price = await txt2.jsonValue();
+    } else if (url.startsWith("https://www.bestbuy.ca/") === true) {
+      const [el] = await page.$x("/html/body/div[1]/div/div/div[4]/div[1]/h1");
+      const txt = await el.getProperty("textContent");
+      var title = await txt.jsonValue();
 
-    const [el2] = await page.$x('//*[@id="price_inside_buybox"]');
-    const txt2 = await el2.getProperty("textContent");
-    var price = await txt2.jsonValue();
+      const [el2] = await page.$x(
+        "/html/body/div[1]/div/div/div[4]/div[1]/div[2]/div[2]/div[1]/div/span/div"
+      );
+      const txt2 = await el2.getProperty("textContent");
+      var price = await txt2.jsonValue();
+      var price = price.slice(0, -2) + "." + price.slice(-2);
+    } else if (url.startsWith("https://www.urbanoutfitters.com") === true) {
+      const [el] = await page.$x(
+        "/html/body/div[1]/div[1]/main/div[5]/div[2]/h1"
+      );
+      const txt = await el.getProperty("textContent");
+      var title = await txt.jsonValue();
+      const [el2] = await page.$x(
+        "/html/body/div[1]/div[1]/main/div[5]/div[2]/p[1]/span"
+      );
+      const txt2 = await el2.getProperty("textContent");
+      var price = await txt2.jsonValue();
+    }
+
+    //*[@id="priceblock_dealprice"]
+    //*[@id="priceblock_ourprice"]
 
     //strips the title and price of whitespaces and new lines
     var title = title.replace(/\n/g, " ");
@@ -167,6 +194,7 @@ async function scrapeProduct(url) {
 
     return await [title, price];
   } catch (error) {
+    console.log(error);
     console.log("error cannot display item");
     return await ["error", "Sorry we cannot get the product info!"];
   }
