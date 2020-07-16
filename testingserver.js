@@ -1,8 +1,7 @@
 var express = require("express");
 var bodyParser = require("body-parser");
-
-//import puppetter
 const puppeteer = require("puppeteer");
+//currently the url and testing current list have products in order to test the Server
 var urls = [
   "https://www.amazon.ca/gp/product/B075GVZTDZ?pf_rd_r=CBGPYKVXJ6Z36GMQM4VP&pf_rd_p=05326fd5-c43e-4948-99b1-a65b129fdd73",
   "https://www.amazon.ca/Bluetooth-Arteck-Stainless-Smartphone-Rechargeable/dp/B015LSEUS8/ref=pd_sbs_147_4/138-6187995-9719521?_encoding=UTF8&pd_rd_i=B015LSEUS8&pd_rd_r=9f38ffb1-8987-410e-98b0-bcf8e77763a7&pd_rd_w=DFekK&pd_rd_wg=jmJwy&pf_rd_p=0ec96c83-1800-4e36-8486-44f5573a2612&pf_rd_r=D5XFQND5K3T58B8YZJF3&psc=1&refRID=D5XFQND5K3T58B8YZJF3",
@@ -31,6 +30,7 @@ var testingCurrentList = [
     "https://www.amazon.ca/Bluetooth-Arteck-Stainless-Smartphone-Rechargeable/dp/B015LSEUS8/ref=pd_sbs_147_4/138-6187995-9719521?_encoding=UTF8&pd_rd_i=B015LSEUS8&pd_rd_r=9f38ffb1-8987-410e-98b0-bcf8e77763a7&pd_rd_w=DFekK&pd_rd_wg=jmJwy&pf_rd_p=0ec96c83-1800-4e36-8486-44f5573a2612&pf_rd_r=D5XFQND5K3T58B8YZJF3&psc=1&refRID=D5XFQND5K3T58B8YZJF3",
   ],
 ];
+//starts the local server
 var app = express();
 var server = app.listen(3000, function () {
   console.log("Listening");
@@ -64,6 +64,7 @@ app.post("/additem", function (request, response) {
     response.end();
     console.log("sending post back ALREADY IN LIST");
   } else {
+    //if url not in list,it will scrape the product
     urls.push(url);
     console.log(urls);
     (async () => {
@@ -86,6 +87,7 @@ app.post("/additem", function (request, response) {
         title: values[0],
         body: values[1],
       };
+      //sends the response back to the client
       currentlist.push(objToCurrentList);
       currentlist.push(urls);
       console.log(currentlist);
@@ -192,6 +194,7 @@ app.get("/testing", function (request, response) {
           }
         }
       }
+      //sends the response back to client
       updatedList.push(urls);
       response.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8",
@@ -246,7 +249,7 @@ async function scrapeProduct(url) {
     const page = await browser.newPage();
     await page.goto(url);
 
-    //checks which website user has requested for
+    //checks which website user has requested for and scrapes product information using XPaths
     if (url.startsWith("https://www.amazon.ca") === true) {
       const [el] = await page.$x('//*[@id="productTitle"]');
       const txt = await el.getProperty("textContent");
